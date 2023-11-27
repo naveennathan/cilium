@@ -549,6 +549,7 @@ func ConvertCEPToCoreCEP(cep *cilium_v2.CiliumEndpoint) *cilium_v2alpha1.CoreCil
 	}
 	return &cilium_v2alpha1.CoreCiliumEndpoint{
 		Name:       cep.GetName(),
+		PodName:    GetPodNameIfExistsFromCiliumEndpoint(cep),
 		Networking: epNetworking,
 		Encryption: cep.Status.Encryption,
 		IdentityID: identityID,
@@ -562,6 +563,12 @@ func ConvertCoreCiliumEndpointToTypesCiliumEndpoint(ccep *cilium_v2alpha1.CoreCi
 		ObjectMeta: slim_metav1.ObjectMeta{
 			Name:      ccep.Name,
 			Namespace: ns,
+			OwnerReferences: []slim_metav1.OwnerReference{
+				{
+					Kind: "Pod",
+					Name: ccep.PodName,
+				},
+			},
 		},
 		Encryption: func() *cilium_v2.EncryptionSpec {
 			enc := ccep.Encryption
@@ -573,4 +580,26 @@ func ConvertCoreCiliumEndpointToTypesCiliumEndpoint(ccep *cilium_v2alpha1.CoreCi
 		Networking: ccep.Networking,
 		NamedPorts: ccep.NamedPorts,
 	}
+}
+
+// GetPodNameIfExistsFromCiliumEndpoint returns the name of the pod associated
+// with the cilium endpoint
+func GetPodNameIfExistsFromCiliumEndpoint(cep interface{}) string {
+	switch concreteCEP := cep.(type) {
+	case *cilium_v2.CiliumEndpoint:
+		for _, ownerRef := range concreteCEP.OwnerReferences {
+			if ownerRef.Kind == "Pod" {
+				return ownerRef.Name
+			}
+		}
+		return concreteCEP.Name
+	case *types.CiliumEndpoint:
+		for _, ownerRef := range concreteCEP.OwnerReferences {
+			if ownerRef.Kind == "Pod" {
+				return ownerRef.Name
+			}
+		}
+		return concreteCEP.Name
+	}
+	return ""
 }

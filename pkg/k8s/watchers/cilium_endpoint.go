@@ -188,7 +188,7 @@ func (k *K8sWatcher) endpointUpdated(oldEndpoint, endpoint *types.CiliumEndpoint
 
 	k8sMeta := &ipcache.K8sMetadata{
 		Namespace:  endpoint.Namespace,
-		PodName:    endpoint.Name,
+		PodName:    k8s.GetPodNameIfExistsFromCiliumEndpoint(endpoint),
 		NamedPorts: make(ciliumTypes.NamedPortMap, len(endpoint.NamedPorts)),
 	}
 	for _, port := range endpoint.NamedPorts {
